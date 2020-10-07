@@ -1,42 +1,50 @@
 
 mutable struct Chain
   #=
-  Represents a 1D lattice of Majorana degrees of freedom with disordered terms.
+  Represents a disordered Hamiltonian written in terms of Majorana operators. The operators act on
+  a one-dimensional lattice of Majorana degrees of freedom with disordered coefficients. Sites get
+  eliminated via an RG procedure.
   =#
 
-  L::Int64 # length of the lattice
-  logc::Array{Float64, 2} #= log couplings; first index sets type of term;
-  second index sets the location (site) =#
-  l::Vector{Int64} # maps site to the left-neighboring site
-  r::Vector{Int64} # maps site to the right-neighboring site
+  L::Int64 # total number of original sites
+  N::Int64 # types of terms
+
+  logc::Array{Float64, 2} # log couplings; first dimension is the type of term, second is the site
+
+  l::Vector{Int64} # maps a site to its left-neighboring site
+  r::Vector{Int64} # maps a site to its right-neighboring site
+
   mask::Vector{Bool} # maps site to true if it has not been integrated out yet
-  nsites::Int64 # the number of sites left = sum(mask)
+  nsites::Int64 # the number of sites remaining = sum(mask)
+
+  function Chain(L::Int64, logc::Array{Float64, 2}, l::Vector{Int64}, r::Vector{Int64},
+  mask::Vector{Bool}, nsites::Int64)::Chain
+      #=
+      default constructor
+      =#
+
+      N = 4 # only considering case of XX, XIX, XIIX, XXXX terms
+      new(L, N, logc, l, r, mask, nsites)
+
+  end
 
 end
 
-function Chain(L::Int64)
+function Chain(L::Int64, dists::Vector{UnivariateDistribution})::Chain
   #=
-  Initialize the Chain randomly with length L and nonzero couplings.
+  Initialize the chain with length L and nonzero couplings sampled from dists.
   =#
 
-  N = 4 # t, u , v, f terms (n = 1, 2, 3, 4, respectively)
-  logc = fill(-Inf, (N, L)) # container to keep log couplings
+  N = 4 # only considering case of XX, XIX, XIIX, XXXX terms
 
-  # distribution of couplings is exponential, but all n terms are greater than any n-1 term
-  dist = Exponential(1)
-  cuts = [log(N/(N-(n-1))) for n in N:-1:1] # left boundaries
+  @assert length(dists) == N "Must provide 4 distributions."
 
-  # fill the container of log couplings
-  jt = ones(Int64, N)
-  while sum(jt .<= L) > 0
+  logc = Array{Float64, 2}(undef, (N, L)) # make space for log couplings
 
-    c = rand(dist)
-    n = findfirst(c .> cuts)
+  # init the log couplings randomly
+  for i in 1:N
 
-    if jt[n] <= L
-      logc[n, jt[n]] = c
-      jt[n] += 1
-    end
+      logc[i, :] .= rand(dists[i], L)
 
   end
 
@@ -50,45 +58,47 @@ function Chain(L::Int64)
 
 end
 
-#= ----- functions for working with the Chain struct ----- =#
-
-function step(c::Chain, i::Int64, delta::Int64)
+function step(c::Chain, i::Int64, di::Int64)::Int64
   #=
-  Starting at site i, go delta sites to the right (goes left if delta is
-  negative) not including sites that have been integrated out already.
+  Starting at site i, go di sites to the right (left if delta is negative), skipping over sites
+  that have been integrated out.
   =#
 
   right = delta >= 0 # are we moving to the right?
 
   # take |di| steps
-  for _ in 1:abs(delta)
+  for _ in 1:abs(di)
+
     i = right ? c.r[i] : c.l[i]
+
   end
 
   i
 
 end
 
-function findmax(c::Chain, n::Int64=1)
+function findmax(c::Chain, n::Int64=1)::Tuple{Float64, Int64}
   #=
   Find the largest type-n term (t, u, v, f are type 1, 2, 3, 4 terms).
   =#
 
+  @assert 1 < n <= c.N "n must be in [1, N]"
+
   # step through the chain and find the maximum coupling
   i = findfirst(c.mask)
-  imx = i
-  mx = c.logc[n, i]
+  imx, mx = i, c.logc[n, i]
 
-  for _ in 2:c.nsites
+  for _ in 1:c.nsites-1
+
     i = c.r[i]
     logc = c.logc[n, i]
+
     if logc > mx
-      imx = i
-      mx = logc
+      imx, mx = i, logc
     end
+
   end
 
-  # return both the maximum log coupling and the site
   mx, imx
 
 end

@@ -1,20 +1,22 @@
 
-function update!(c::Chain)
+function update!(c::Chain)::Nothing
   #=
-  Integrate out the two sites participating in the strongest type-1 coupling.
+  Integrate out the two sites participating in the strongest XX coupling. Refer to XX, XIX, XIIX,
+  XXXX types by t, u, v, f, respectively.
   =#
 
-  N = 4 # t, u , v, f terms (type n = 1, 2, 3, 4, respectively)
-  L = c.L
+  N, L = c.N, c.L
 
-  Omega, imax = findmax(c) # find the largest type-1 coupling
-  #= steps away from the "zero" site (imax site) that we'll need =#
-  deltas = [-3:3, -2:3, -2:2, -2:2]
+  lt0, imax = findmax(c) # find the largest XX (t type) coupling
+
+  #= steps away from the "zero" site (imax site) that we'll need for each type =#
+  dis = [-3:3, -2:3, -2:2, -2:2]
+
   # pack the local couplings that are needed (and their locations) into arrays
-  inds = [[step(c, imax, delta) for delta in deltas[n]] for n in 1:N]
+  inds = [[step(c, imax, di) for di in dis[n]] for n in 1:N]
   lcs = [c.logc[n, inds[n]] for n in 1:N] # lc stands for log coupling
 
-  zs = [1-deltas[n][1] for n in 1:N] # the indices of the "zero site"
+  zs = [1-dis[n][1] for n in 1:N] # the indices of the "zero site" for each type
 
   # to store renormalized couplings
   newinds = [vcat(inds[n][1:zs[n]-1], inds[n][zs[n]+2:end]) for n in 1:N]
@@ -31,41 +33,41 @@ function update!(c::Chain)
   nlf = view(newlcs[4], :)
   zt, zu, zv, zf = zs
 
-  # t-type couplings (n = 1)
-  nlt[zt-3] = max(lt[zt-3], lt[zt-1]+lf[zf-2]-Omega, lv[zv-2]+lv[zv-1]-Omega)
-  nlt[zt-2] = max(lt[zt-2], lf[zf-1], lv[zv-2]+lf[zf-2]-Omega, lt[zt-1]+lv[zv-1]
-    -Omega, lu[zu-1]+lu[zu]-Omega)
-  nlt[zt-1] = max(lf[zf], lt[zt-1]+lt[zt+1]-Omega, lu[zu]+lu[zu+1]-Omega)
-  nlt[zt] = max(lt[zt+2], lf[zf+1], lv[zv+2]+lf[zf+2]-Omega, lt[zt+1]+lv[zv+1]
-    -Omega, lu[zu+1]+lu[zu+2]-Omega)
-  nlt[zt+1] = max(lt[zt+3], lt[zt+1]+lf[zf+2]-Omega, lv[zv+1]+lv[zv+2]-Omega)
+  # t type couplings, XX, n = 1
+  nlt[zt-3] = max(lt[zt-3], lt[zt-1]+lf[zf-2]-lt0, lv[zv-2]+lv[zv-1]-lt0)
+  nlt[zt-2] = max(lt[zt-2], lf[zf-1], lv[zv-2]+lf[zf-2]-lt0, lt[zt-1]+lv[zv-1]
+    -lt0, lu[zu-1]+lu[zu]-lt0)
+  nlt[zt-1] = max(lf[zf], lt[zt-1]+lt[zt+1]-lt0, lu[zu]+lu[zu+1]-lt0)
+  nlt[zt] = max(lt[zt+2], lf[zf+1], lv[zv+2]+lf[zf+2]-lt0, lt[zt+1]+lv[zv+1]
+    -lt0, lu[zu+1]+lu[zu+2]-lt0)
+  nlt[zt+1] = max(lt[zt+3], lt[zt+1]+lf[zf+2]-lt0, lv[zv+1]+lv[zv+2]-lt0)
 
-  # u-type couplings (n = 2)
-  nlu[zu-2] = max(lu[zu-2], lu[zu-1]+lf[zf-2]-Omega, lv[zv-2]+lu[zu]-Omega)
-  nlu[zu-1] = max(lu[zu-1]+lt[zt+1]-Omega, lv[zv-1]+lu[zu+1]-Omega)
-  nlu[zu] = max(lt[zt-1]+lu[zu+2]-Omega, lu[zu]+lv[zv+1]-Omega)
-  nlu[zu+1] = max(lu[zu+3], lu[zu+2]+lf[zf+2]-Omega, lu[zu+1]+lv[zv+2]-Omega)
+  # u type couplings, XIX, n = 2
+  nlu[zu-2] = max(lu[zu-2], lu[zu-1]+lf[zf-2]-lt0, lv[zv-2]+lu[zu]-lt0)
+  nlu[zu-1] = max(lu[zu-1]+lt[zt+1]-lt0, lv[zv-1]+lu[zu+1]-lt0)
+  nlu[zu] = max(lt[zt-1]+lu[zu+2]-lt0, lu[zu]+lv[zv+1]-lt0)
+  nlu[zu+1] = max(lu[zu+3], lu[zu+2]+lf[zf+2]-lt0, lu[zu+1]+lv[zv+2]-lt0)
 
-  # v-type couplings (n = 3)
-  nlv[zv-2] = lv[zv-2]+lt[zt+1]-Omega
-  nlv[zv-1] = max(lu[zu-1]+lu[zu+2]-Omega, lv[zv-1]+lv[zv+1]-Omega)
-  nlv[zv] = lt[zt-1]+lv[zv+2]-Omega
+  # v type couplings, XIIX, n = 3
+  nlv[zv-2] = lv[zv-2]+lt[zt+1]-lt0
+  nlv[zv-1] = max(lu[zu-1]+lu[zu+2]-lt0, lv[zv-1]+lv[zv+1]-lt0)
+  nlv[zv] = lt[zt-1]+lv[zv+2]-lt0
 
-  # f-type couplings (n = 4)
-  nlf[zf-2] = lf[zf-2]+lt[zt+1]-Omega
-  nlf[zf-1] = -Inf #= max(lu[zu-1]+lu[zu]+lf[zf+1]-2*Omega, lf[zf-1]+lu[zu+1]+lu[zu+2]
-    -2*Omega, lt[zt-1]+lv[zv-1]+lf[zf+1]-2*Omega, lf[zf-1]+lt[zt+1]+lv[zv+1]
-    -2*Omega, lu[zu-1]+lf[zf]+lu[zu+2]-2*Omega, lv[zv-1]+lf[zf]+lv[zv+1]
-    -2*Omega, lu[zu-1]+lf[zf]+lv[zv+1]-2*Omega, lv[zv-1]+lf[zf]+lu[zu+2]
-    -2*Omega) =#
-  nlf[zf] = lt[zt-1]+lf[zf+2]-Omega
+  # f type couplings, XXXX, n = 4
+  nlf[zf-2] = lf[zf-2]+lt[zt+1]-lt0
+  nlf[zf-1] = -Inf #= max(lu[zu-1]+lu[zu]+lf[zf+1]-2*lt0, lf[zf-1]+lu[zu+1]+lu[zu+2]
+    -2*lt0, lt[zt-1]+lv[zv-1]+lf[zf+1]-2*lt0, lf[zf-1]+lt[zt+1]+lv[zv+1]
+    -2*lt0, lu[zu-1]+lf[zf]+lu[zu+2]-2*lt0, lv[zv-1]+lf[zf]+lv[zv+1]
+    -2*lt0, lu[zu-1]+lf[zf]+lv[zv+1]-2*lt0, lv[zv-1]+lf[zf]+lu[zu+2]
+    -2*lt0) =#
+  nlf[zf] = lt[zt-1]+lf[zf+2]-lt0
 
   # delete two sites from the chain
-  i1, i2, i3, i4 = [step(c, imax, dlta) for dlta in -1:2]
-  c.l[i2], c.r[i2], c.l[i3], c.r[i3] = fill(-1, 4) #= sites that get integrated
-  out are marked with -1 =#
+  i1, i2, i3, i4 = [step(c, imax, di) for di in -1:2]
+  c.l[i2], c.r[i2], c.l[i3], c.r[i3] = fill(-1, 4) # mark deleted sites with -1
   c.mask[[i2, i3]] .= false
   c.nsites -= 2
+
   # i1 and i4 are now neighbors; i2 and i3 have been integrated out
   c.r[i1] = i4
   c.l[i4] = i1
@@ -79,7 +81,7 @@ function update!(c::Chain)
 
 end
 
-function update!(c::Chain, nsteps::Int64)
+function update!(c::Chain, nsteps::Int64)::Nothing
   #=
   Update the chain multiple times.
   =#
