@@ -30,7 +30,7 @@ mutable struct Chain
 
 end
 
-function Chain(L::Int64, dists::Vector{UnivariateDistribution})::Chain
+function Chain(L::Int64, dists::Vector{Distribution{Univariate, Continuous}})::Chain
   #=
   Initialize the chain with length L and nonzero couplings sampled from dists.
   =#
@@ -51,7 +51,7 @@ function Chain(L::Int64, dists::Vector{UnivariateDistribution})::Chain
   # set the neighbor relations and start with no sites integrated out
   l = circshift(1:L, 1)
   r = circshift(1:L, -1)
-  mask = trues(L)
+  mask = fill(true, L)
   nsites = L
 
   Chain(L, logc, l, r, mask, nsites)
@@ -64,7 +64,7 @@ function step(c::Chain, i::Int64, di::Int64)::Int64
   that have been integrated out.
   =#
 
-  right = delta >= 0 # are we moving to the right?
+  right = di >= 0 # are we moving to the right?
 
   # take |di| steps
   for _ in 1:abs(di)
@@ -82,7 +82,7 @@ function findmax(c::Chain, n::Int64=1)::Tuple{Float64, Int64}
   Find the largest type-n term (t, u, v, f are type 1, 2, 3, 4 terms).
   =#
 
-  @assert 1 < n <= c.N "n must be in [1, N]"
+  @assert 1 <= n <= c.N "n must be in [1, N]"
 
   # step through the chain and find the maximum coupling
   i = findfirst(c.mask)
