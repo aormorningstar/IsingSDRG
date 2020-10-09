@@ -2,5 +2,6 @@
 data/
 analysis/
 plots/
+dep/
 *.ipynb
 *.sh
