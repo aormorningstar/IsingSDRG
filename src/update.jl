@@ -55,11 +55,11 @@ function update!(c::Chain)::Nothing
 
   # f type couplings, XXXX, n = 4
   nlf[zf-2] = lf[zf-2]+lt[zt+1]-lt0
-  nlf[zf-1] = -Inf #= max(lu[zu-1]+lu[zu]+lf[zf+1]-2*lt0, lf[zf-1]+lu[zu+1]+lu[zu+2]
+  nlf[zf-1] = max(lu[zu-1]+lu[zu]+lf[zf+1]-2*lt0, lf[zf-1]+lu[zu+1]+lu[zu+2]
     -2*lt0, lt[zt-1]+lv[zv-1]+lf[zf+1]-2*lt0, lf[zf-1]+lt[zt+1]+lv[zv+1]
     -2*lt0, lu[zu-1]+lf[zf]+lu[zu+2]-2*lt0, lv[zv-1]+lf[zf]+lv[zv+1]
     -2*lt0, lu[zu-1]+lf[zf]+lv[zv+1]-2*lt0, lv[zv-1]+lf[zf]+lu[zu+2]
-    -2*lt0) =#
+    -2*lt0) # -Inf
   nlf[zf] = lt[zt-1]+lf[zf+2]-lt0
 
   # delete two sites from the chain

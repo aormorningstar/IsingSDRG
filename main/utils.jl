@@ -25,7 +25,7 @@ function dict_to_string(d::Dict)
     =#
 
     flat_list = collect(Iterators.flatten([[p[1],p[2]] for p in collect(d)]))
-    
+
     join(string.(flat_list), "_")
 
 end

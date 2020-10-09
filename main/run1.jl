@@ -16,14 +16,15 @@ function run(; Li::Int64, Lf::Int64, nt::Int64, np::Int64, alpha::Float64, kwarg
     @assert alpha > 0 "alpha > 0 must be true"
     @assert Li > Lf "initial number of sites must be larger than final"
 
-    # set up integer times spaced approx evenly on a log scale
+    # set up times at which to take a "snapshot"
     T = div(Li - Lf, 2)
-    ts = logspace(1, T, nt)
-    dts = diff(ts)
+    ts = T .- unique(reverse(logspace(1, T, nt) .- 1)) # take out repeated values and reset nt
+    nt = length(ts)
+    dts = diff([0; ts])
 
     # initialize chain
     d1 = Exponential(alpha) # t ~ t^{-(1+alpha)}, so logt ~ exp(-alpha logt)
-    a, b = -1.1, -0.9 # default params
+    a, b = -0.1, 0.1 # default params
     d2 = Uniform(a, b) # a default dist for all other couplings
     c = Chain(Li, [d1, d2, d2, d2])
 

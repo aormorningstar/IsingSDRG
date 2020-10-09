@@ -1,1 +1,6 @@
-data/*
+.DS_Store
+data/
+analysis/
+plots/
+*.ipynb
+*.sh
