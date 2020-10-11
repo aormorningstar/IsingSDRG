@@ -20,7 +20,7 @@ mutable struct Chain
   function Chain(L::Int64, logc::Array{Float64, 2}, l::Vector{Int64}, r::Vector{Int64},
   mask::Vector{Bool}, nsites::Int64)::Chain
       #=
-      default constructor
+      Default constructor.
       =#
 
       N = 4 # only considering case of XX, XIX, XIIX, XXXX terms
@@ -30,21 +30,21 @@ mutable struct Chain
 
 end
 
-function Chain(L::Int64, dists::Vector{Distribution{Univariate, Continuous}})::Chain
+function Chain(L::Int64, rands::Vector{Function})::Chain
   #=
-  Initialize the chain with length L and nonzero couplings sampled from dists.
+  Initialize the chain with length L and random couplings.
   =#
 
   N = 4 # only considering case of XX, XIX, XIIX, XXXX terms
 
-  @assert length(dists) == N "Must provide 4 distributions."
+  @assert length(rands) == N "Must provide 4 distributions."
 
   logc = Array{Float64, 2}(undef, (N, L)) # make space for log couplings
 
   # init the log couplings randomly
   for i in 1:N
 
-      logc[i, :] .= rand(dists[i], L)
+      logc[i, :] .= rands[i](L)
 
   end
 
@@ -55,6 +55,17 @@ function Chain(L::Int64, dists::Vector{Distribution{Univariate, Continuous}})::C
   nsites = L
 
   Chain(L, logc, l, r, mask, nsites)
+
+end
+
+function Chain(L::Int64, dists::Vector{Distribution{Univariate, Continuous}})
+    #=
+    Initialize the chain with length L and random couplings.
+    =#
+
+    rands = [l -> rand(dist, l) for dist in dists]
+
+    Chain(L, rands)
 
 end
 

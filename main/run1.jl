@@ -8,7 +8,7 @@ using Statistics
 include("../src/IsingSDRG.jl")
 include("./utils.jl")
 
-function run(; Li::Int64, Lf::Int64, nt::Int64, np::Int64, alpha::Float64, kwargs...)
+function run(; Li::Int64, Lf::Int64, nt::Int64, np::Int64, alpha::Float64, onlyXX::Bool, kwargs...)
     #=
     The "main" function. Run the simulations. Output the data.
     =#
@@ -23,10 +23,18 @@ function run(; Li::Int64, Lf::Int64, nt::Int64, np::Int64, alpha::Float64, kwarg
     dts = diff([0; ts])
 
     # initialize chain
-    d1 = Exponential(alpha) # t ~ t^{-(1+alpha)}, so logt ~ exp(-alpha logt)
-    a, b = -0.1, 0.1 # default params
-    d2 = Uniform(a, b) # a default dist for all other couplings
-    c = Chain(Li, [d1, d2, d2, d2])
+    d1 = Exponential(alpha)
+    r1(args...) = -rand(d1, args...) # tail goes to small couplings at Fisher's fixed point
+
+    mu = alpha*log(10)
+    d2 = Normal(mu, 0)
+    r2(args...) = -rand(d2, args...) # default params, larger than 10% of r1 samples
+
+    d3 = Normal(Inf)
+    r3(args...) = -rand(d3, args...) # if we don't want a certain coupling
+
+    rands = onlyXX ? [r1, r3, r3, r3] : Chain(Li, [r1, r2, r2, r2])
+    c = Chain(Li, rands)
 
     # track some points of the empirical cumulative probablity distribution
     p = quantile_probs(np)
@@ -71,7 +79,10 @@ aps = ArgParseSettings()
 
     "--alpha" # controls power law for the initial distribution of the type-1 couplings
         arg_type = Float64
-        default = 0.1
+        default = 1.0
+
+    "--onlyXX" # only include the XX terms
+        action = :store_true
 
     "--testing" # store data in local testing directory
         action = :store_true
