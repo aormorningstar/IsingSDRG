@@ -8,7 +8,8 @@ using Statistics
 include("../src/IsingSDRG.jl")
 include("./utils.jl")
 
-function run(; Li::Int64, Lf::Int64, nt::Int64, np::Int64, alpha::Float64, onlyXX::Bool, kwargs...)
+function run(; Li::Int64, Lf::Int64, nt::Int64, np::Int64, alpha::Float64, scale::Float64,
+onlyXX::Bool, kwargs...)
     #=
     The "main" function. Run the simulations. Output the data.
     =#
@@ -23,17 +24,14 @@ function run(; Li::Int64, Lf::Int64, nt::Int64, np::Int64, alpha::Float64, onlyX
     dts = diff([0; ts])
 
     # initialize chain
-    d1 = Exponential(alpha)
-    r1(args...) = -rand(d1, args...) # tail goes to small couplings at Fisher's fixed point
+    d = Exponential(alpha)
+    shifts = -scale*collect(0:3)
 
-    mu = alpha*log(10)
-    d2 = Normal(mu, 0)
-    r2(args...) = -rand(d2, args...) # default params, larger than 10% of r1 samples
+    if onlyXX # only keep XX terms
+        shifts[2:end] .= -Inf
+    end
 
-    d3 = Normal(Inf)
-    r3(args...) = -rand(d3, args...) # if we don't want a certain coupling
-
-    rands = onlyXX ? [r1, r3, r3, r3] : [r1, r2, r2, r2]
+    rands::Vector{Function} = [(args...) -> -rand(d, args...) .+ s for s in shifts]
     c = Chain(Li, rands)
 
     # track some points of the empirical cumulative probablity distribution
@@ -80,6 +78,10 @@ aps = ArgParseSettings()
     "--alpha" # controls power law for the initial distribution of the type-1 couplings
         arg_type = Float64
         default = 1.0
+
+    "--scale" # controls initial distributions
+        arg_type = Float64
+        default = 5.0
 
     "--onlyXX" # only include the XX terms
         action = :store_true
