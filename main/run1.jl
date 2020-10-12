@@ -33,7 +33,7 @@ function run(; Li::Int64, Lf::Int64, nt::Int64, np::Int64, alpha::Float64, onlyX
     d3 = Normal(Inf)
     r3(args...) = -rand(d3, args...) # if we don't want a certain coupling
 
-    rands = onlyXX ? [r1, r3, r3, r3] : Chain(Li, [r1, r2, r2, r2])
+    rands = onlyXX ? [r1, r3, r3, r3] : [r1, r2, r2, r2]
     c = Chain(Li, rands)
 
     # track some points of the empirical cumulative probablity distribution
@@ -109,7 +109,7 @@ data_file_path = join([data_dir, data_file_name, ".hdf5"])
 data_file = h5open(data_file_path, "w")
 for ky in keys(ad)
     strky = string(ky)
-    if strky != "testing"
+    if strky != "testing" && strky != "onlyXX"
         attrs(data_file)[strky] = ad[ky]
     end
 end
