@@ -38,10 +38,13 @@ onlyXX::Bool, kwargs...)
     p = quantile_probs(np)
     q_data = Array{Float64, 3}(undef, (np, c.N, nt)) # container for the data
 
+    # track fraction of updates of XX terms that get influenced by XIX, XIIX, XXXX terms
+    f_data = Vector{Float64}(undef, nt)
+
     # RG updates
     for (i, dt) in enumerate(dts)
 
-        update!(c, dt)
+        f_data[i] = update!(c, dt)
 
         # calculate quantiles for all types of couplings
         for j in 1:c.N
@@ -50,7 +53,7 @@ onlyXX::Bool, kwargs...)
 
     end
 
-    ts, p, q_data
+    ts, p, q_data, f_data
 
 end
 
@@ -81,7 +84,7 @@ aps = ArgParseSettings()
 
     "--scale" # controls initial distributions
         arg_type = Float64
-        default = 5.0
+        default = 4.0
 
     "--onlyXX" # only include the XX terms
         action = :store_true
@@ -95,8 +98,8 @@ const ad = parse_args(aps, as_symbols=true)
 const testing = ad[:testing]
 
 # run the simulation
-t_dat, p_dat, q_dat = run(; ad...)
-data = Dict("time" => t_dat, "cdf" => p_dat, "logcoupling" => q_dat)
+t_dat, p_dat, q_dat, f_dat = run(; ad...)
+data = Dict("time" => t_dat, "cdf" => p_dat, "logcoupling" => q_dat, "updatefraction" => f_dat)
 
 # set up data file name
 local_data_dir = "../data/testing/"
